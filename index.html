@@ -1,0 +1,28 @@
+<!DOCTYPE html> 
+<!-- basic little html to get started -->
+<html>
+   <head>
+      <!-- <meta http-equiv="content-type" content="text/html; charset=UTF8"> -->
+      <title>Math Genealogy Visualizer</title>
+      <!-- <link rel="stylesheet" href="style.css"> -->
+   </head>
+   <body>
+      <div id="content">
+      <div class="centered">
+         <h1>Math Genealogy Visualizer</h1>
+         <div id="loading">
+            <div class="spinner"></div>
+         </div>
+         <div id="hide_while_loading">
+            <div id="single_name_form">
+               <p>
+                  <label>Enter a name</label>
+                  <input id="single_name_input" placeholder="Enter a name" autocomplete="off" />
+               </p>
+            </div>
+         </div>
+      </div>
+      <script src="https://d3js.org/d3.v3.js"></script> 
+      <script src="build/main.bundle.js"></script>
+   </body>
+</html>
