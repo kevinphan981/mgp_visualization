@@ -5,7 +5,11 @@
 
     //TODO: addChild method
 
+   /*
+    render takes the graph data and then renders it using d3.
 
+    
+   */
      export function render(graphData) {
         if (graphData == null || graphData.size == 0) {
             console.error("No data");
@@ -18,18 +22,31 @@
             for (const [key, value] of graphData.entries()) {
                 // set up a node for each respective entry in the data
                 graph.setNode(key, {
-                    label: key,
-                    edge: value.edges,
+                    label: `${value.detail.givenName} ${value.detail.familyName} (${value.detail.yearAwarded})`,
                     detail: value.detail
                 });
-                value.edges.forEach(edge => {
-                    graph.setEdge(key, edge, {
-                        arrowhead: "normal", //aesthetics behind the arrow in digraph
-                        curve: d3.curveBasis,
-                        label: " "
-                    });
+            }
+
+        //gets the edges that we have in the data
+        for (const [key, value] of graphData.entries()) {
+
+            value.edges.forEach(edge => {
+
+                //check to see if graph does not have a node
+                if (!graph.hasNode(edge)) {
+                    //make random node so the edge can at least be there, ideally it would be another node in itself
+
+                    //MUST CHANGE
+                    graph.setNode(edge, {label: `${edge}`});
+                }
+
+                graph.setEdge(key, edge, {
+                    arrowhead: "normal", //aesthetics behind the arrow in digraph
+                    curve: d3.curveBasis,
+                    label: " "
                 });
-        }
+            });
+         }
 
         // now setting up the scene using d3 for the visual
 
@@ -55,7 +72,7 @@
             .translate((svg.attr("width") - graph.graph().width * initialScale) / 2, 20)
             .scale(initialScale));
 
-        svg.attr('height', g.graph().height * initialScale + 40);
+        svg.attr('height', graph.graph().height * initialScale + 40);
         
         
         //TODO: some click/hover features... somehow

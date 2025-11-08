@@ -4,16 +4,34 @@
 import { render } from './graph.js';
 import { created } from './graph-data.js';
 
-// 1. Call created() to get your data
-const myGraphData = created();
+async function initGraph() {
+  let rootMrauthId = "462675"; //magic number fuck my life
 
-// 2. Check if it worked
-if (myGraphData && myGraphData.size > 0) {
-    // 3. Pass the data to render()
+  console.log("1. fetching graph data from ID: ${rootMrauthId}");
+
+  const myGraphData = await created(rootMrauthId);
+
+  if (myGraphData && myGraphData.size > 0) {
+    console.log("2. data loaded successfully, rendering graph");
     render(myGraphData);
-} else {
-    console.error("Failed to load or create graph data. Graph will not be rendered.");
+  }
+  else {
+    console.error("failed to load or create graph data, graph will not be rendered")
+  }
 }
+
+initGraph();
+
+// // 1. Call created() to get your data
+// const myGraphData = created();
+
+// // 2. Check if it worked
+// if (myGraphData && myGraphData.size > 0) {
+//     // 3. Pass the data to render()
+//     render(myGraphData);
+// } else {
+//     console.error("Failed to load or create graph data. Graph will not be rendered.");
+// }
 
 
 
