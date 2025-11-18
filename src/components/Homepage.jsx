@@ -29,12 +29,27 @@ function Homepage() {
           <div className="info-card">
             <h3>Features</h3>
             <p>
-              <strong>Search Bar</strong>: To search for a specific mathematician, 
+              <strong>Hover</strong>: To learn more about a mathematician, hover over their node to see details such as
+              their name, thesis, institution, and year of graduation.
+            </p>
+            <p>
+              <strong>Click</strong>: To focus the tree on a specific mathematician, click on their node to center the visualization
+              around them, which will display their advisors, cohort peers, and students.
+            </p>
+            <p>
+              <strong>Search Bar</strong>: To search for a mathematician, 
               enter their name in the search bar located at the top of the visualization.
             </p>
             <p>
-              <strong>Filter Options</strong>: To filter for specific mathematicians based on the year or
+              <strong>Filter Options</strong>: To filter for mathematicians based on the year or
               institution they got their graduate degree from, use the filter options located on the right.
+              The filter bar can also be used to show or hide advisors, cohort peers, and students.
+            </p>
+            <p>
+              <strong>Color Gradient</strong>: To make the relationships easy to identify, a mathematician's{' '}
+              <span style={{ color: '#1f261a' }}>advisor</span> nodes use a darker shade,{' '}
+              <span style={{ color: '#5e734e' }}>cohort peer and focus</span> nodes use a medium shade, and{' '}
+              <span style={{ color: '#9dc183' }}>student</span> nodes use a lighter shade.
             </p>
           </div>
         </div>
