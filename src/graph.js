@@ -1,12 +1,9 @@
 // Enhanced graph rendering with color gradients and stats panel
-
 /*
  render takes the graph data and then renders it using d3 with color coding
 */
 
-//  // SAKURA'S FIX: THIS IS ALL CLAUDE SLOP FOR NOW
-
-
+// SAKURA'S FIX: THIS IS ALL CLAUDE SLOP FOR NOW
 export function render(graphData, rootId) {
     if (graphData == null || graphData.size == 0) {
         console.error("No data");
@@ -55,6 +52,13 @@ export function render(graphData, rootId) {
     for (const [key, value] of graphData.entries()) {
         const level = levels.get(key);
         let nodeColor = colors.root;
+
+        // elementary check to see if the detail data is there
+        if (!value || !value.detail) {
+            console.warn(`Skipping node ${storeKey}: Missing 'detail' data.`);
+            continue;
+        }
+            
         
         // FIX: Better handling of undefined levels with debug logging
         if (level === undefined) {
@@ -145,13 +149,93 @@ export function render(graphData, rootId) {
                 .style("stroke-width", "4px")
                 .style("stroke", "#ff6b6b");
         })
-        .on("mouseover", function() {
-            d3.select(this).select("rect")
-                .style("opacity", "0.8");
-        })
-        .on("mouseout", function() {
+        //mouseover feature to highlight the particular node
+        // .on("mouseover", function() { 
+        //     d3.select(this).select("rect")
+        //         .style("opacity", "0.8");
+        // })
+        //mousever feature to give additional information on node
+        .on("mouseover", function(event, nodeId) { //d is the "ID" in this case, the internal one
+
+                const targetElement = d3.select(event.currentTarget); //focuses only on the hover
+                targetElement.raise(); //raises the hover feature over the nodes
+                
+                // NEW DEFENSE: Ensure 'this' is a valid DOM element before selecting it
+                if (!this) return; 
+
+               
+                // 1. Correctly retrieve the node data object
+                const lookupId = nodeId; 
+                const nodeValue = graph.node(lookupId);
+
+                // 2. Perform the defensive check on the stored property
+                if (!nodeValue || !nodeValue.detail) {
+                    console.error("Missing custom data for node ID:", lookupId);
+                    return;
+                }
+                
+                const nodeData = nodeValue.detail;
+                
+                // Remove old tooltips before creating a new one
+                targetElement.selectAll(".hover-tooltip-group").remove();
+
+
+                const tooltipGroup = targetElement.append("g")
+                    .attr("class", "hover-tooltip-group")
+                    .attr("transform", "translate(50, -50)");
+
+                const tooltipText = tooltipGroup.append("text")
+                    .attr("x", 30) //5
+                    .attr("y", -20) //5
+                    .attr("text-anchor", "start")
+                    .style("font-size", "12px")
+                    .style("fill", "#333");
+
+                // 4. Bind the tooltip data
+                tooltipText.selectAll("tspan")
+                // Bind the data array, using || 'N/A' for safety
+                .data([
+                    `Family Name: ${nodeData.familyName || 'N/A'}`,
+                    `Given Name: ${nodeData.givenName || 'N/A'}`,
+                    `Year Awarded: ${nodeData.yearAwarded || 'N/A'}`,
+                    `MRAUTH ID: ${nodeData.mrauth_id || 'N/A'}`,
+                    `Internal ID: ${nodeData.internal_id || 'N/A'}`
+                ])
+                .enter()
+                .append("tspan")
+                .attr("x", 25) // Reset X for each tspan line
+                .attr("dy", "1.2em") // Offset Y for each tspan line
+                .text(d => d);
+
+                // rectangle box that needs to come in AFTER the text above
+                // requires a timeout
+
+                setTimeout(() => {
+                    try {
+                        const box = tooltipText.node().getBBox();
+
+                        // append the rectangle to group before text
+                        tooltipGroup.insert("rect", "text")
+                            .attr("x", box.x -5) //padding
+                            .attr("y", box.y - 5)
+                            .attr("width", box.width + 10)
+                            .attr("height", box.height + 10)
+                            .style("fill", "f9f9f9") //light gray
+                            .style("stroke", "#666") //also gray
+                            .style("stroke-width", 0.75);
+                            // .style("opacity", .9);
+                    } catch (e) {
+                        console.warn("Could not calculate tooltip bounding box: ", e);
+                    }
+                }, 0); //small timeout, could increase
+                
+            }).on("mouseout", function() {
+            const targetElement = d3.select(this);
             d3.select(this).select("rect")
                 .style("opacity", "1");
+
+            // remove the tooltip group from above
+            targetElement.selectAll(".hover-tooltip-group").remove();
         });
 
     // Centering the visual

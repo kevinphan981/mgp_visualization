@@ -10,7 +10,7 @@ export async function loadData(params) {
     if (dataCache) return; // we let it pass
 
     try {
-        const response = await fetch("../sample-data/all_academics_merged_backup.json")
+        const response = await fetch("../sample-data/all_academics_merged_complete.json")
         if (!response.ok) {
             throw new Error(`HTTP error status: ${response.status}`)
         }
@@ -136,6 +136,7 @@ function addNodeToMap(map, dataCache, id) {
         }
     });
 
+
     map.set(id, {
         edges: adviseeIds,
         detail: details,
@@ -167,7 +168,7 @@ export function created(rootMrauthId) {
     for (const key in dataCache) {
         const academic = dataCache[key]?.MGP_academic;
         if (academic && academic.mrauth_id === rootMrauthId) {
-            rootId = academic.ID; // e.g., "258"
+            rootId = academic.ID; // ** e.g., "258" could be made rootId = key if something is off
             break; // We found them
         }
     }
