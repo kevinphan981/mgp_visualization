@@ -239,7 +239,6 @@ function calculateLevels(graphData, rootId) {
             console.warn(`Node ${key} (${value.detail.givenName} ${value.detail.familyName}) has no level assigned!`);
         }
     }
-    
     return levels;
 }
 
