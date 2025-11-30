@@ -1,5 +1,6 @@
 import * as d3 from 'd3';
-import * as dagreD3 from 'dagre-d3';
+//KEVIN: dagre-d3-es in order to stay with d3@7 (version 7)
+import * as dagreD3 from 'dagre-d3-es'; //
 
 // Enhanced graph rendering with color gradients and stats panel
 /*
@@ -211,10 +212,13 @@ export function render(graphData, rootId) {
                 .data([
                     `${nodeData.givenName} ${nodeData.familyName}`,
                     `─────────────────────────────`,
-                    `PhD Year: ${nodeData.yearAwarded || 'N/A'}`,
-                    `MR Author ID: ${nodeData.mrauth_id || 'N/A'}`,
+                    // `PhD Year: ${nodeData.yearAwarded || 'N/A'}`,
+                    // `MR Author ID: ${nodeData.mrauth_id || 'N/A'}`,
                     `Advisors: ${advisorNames}`,
-                    `Direct Descendants: ${descendantCount}`
+                    `Recorded Descendants: ${descendantCount}`
+                    ,
+                    `School: ${nodeData.school || 'N/A'}`,
+                    `Thesis: ${nodeData.thesis || 'N/A'}`
                 ])
                 .enter()
                 .append("tspan")
@@ -262,6 +266,14 @@ export function render(graphData, rootId) {
     const svgBounds = svgNode.getBoundingClientRect();
     const graphWidth = graph.graph().width;
     const graphHeight = graph.graph().height;
+
+    //KEVIN: defensive measure to stop crashes with container
+    if (graphWidth === 0 || graphHeight === 0 || svgBounds.width === 0) {
+        console.warn("Graph or Container has 0 dimensions. Skipping zoom/center.");
+        // Default to scale 1 so it doesn't break
+        svg.call(zoom.transform, d3.zoomIdentity.translate(0, 0).scale(1));
+        return; 
+    }
 
     // calculate scale to fit the entire graph with padding
     const scaleX = (svgBounds.width - 100) / graphWidth; 

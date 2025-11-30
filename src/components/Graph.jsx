@@ -111,7 +111,8 @@ function Graph() {
         </div>
       )}
 
-      {/* SAKURA: container from HTML that D3 renders into */}
+      {/* SAKURA: container from HTML that D3 renders into
+          KEVIN: this comment was done improperly? */} 
       <div id="container" style={{ display: isLoading ? 'none' : 'block' }}>
         <svg><g/></svg>
       </div>

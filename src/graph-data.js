@@ -1,4 +1,8 @@
-import FuzzySet from 'fuzzyset.js'
+//KEVIN: remove 'fuzzyset.js' through npm because of conflict, idk if this error shows up for everyone else
+
+import FuzzySet from 'fuzzyset' 
+// const FuzzySet = require('fuzzyset.js'); keep just in case
+
 // caches for data and search
 let dataCache = null;
 let nameSearchSet = null;
@@ -86,29 +90,49 @@ function addNodeToMap(map, dataCache, id) {
 
     // Gemini slop: Safely get the degrees array, or an empty one
     let year = "N/A"; // Default year
+    let school = "N/A";
+    let thesis = "N/A";
     
     // Safely get the degrees array, or an empty one
     const degrees = academic?.student_data?.degrees || [];
 
     if (degrees.length > 0) {
-        // 1. Try to find a Ph.D. degree
+
+        // 1. FINDING YEAR AWARDED
+
+        // a. try to find PhD degree
         const phdDegree = degrees.find(d => d.degree_type === "Ph.D.");
         
         if (phdDegree && phdDegree.degree_year) {
             year = phdDegree.degree_year;
         } else {
-            // 2. If no Ph.D., fall back to the last degree in the list
+            // b. If no Ph.D., fall back to the last degree in the list
             const lastDegree = degrees[degrees.length - 1];
             year = lastDegree?.degree_year || "N/A"; // Fallback to N/A
         }
-    }
 
+        // 2. FINDING SCHOOL
+        const degreeWithSchool = degrees.find(d => d.schools);
+        school = degreeWithSchool ? degreeWithSchool.schools : "";
+        // 3. FINDING THESIS
+        const degreeWithThesis = degrees.find(d => d.thesis_title);
+        thesis = degreeWithThesis ? degreeWithThesis.thesis_title : "";
+    }
+    /*
+        KEVIN: More Details to pre-existing details
+        1. schools
+        2. thesis_title
+
+    */
     const details = {
         familyName: academic.family_name || "",
         givenName: academic.given_name || "",
         yearAwarded: year,
         mrauth_id: academic.mrauth_id,
         internal_id: id
+        ,
+        school: school,
+        thesis: thesis 
     };
 
     // SAKURA: filter out null and empty values
