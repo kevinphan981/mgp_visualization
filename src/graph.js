@@ -8,7 +8,10 @@ import * as dagreD3 from 'dagre-d3-es'; //
 */
 
 // SAKURA: THIS IS ALL CLAUDE SLOP REVISED FOR NOW
-export function render(graphData, rootId) {
+export function render(graphData, rootId, onNodeClick) {
+
+    console.log("Render called. Is onNodeClick valid?", typeof onNodeClick); // Should say "function"
+    
     if (graphData == null || graphData.size === 0) {
         console.error("No data");
         return;
@@ -34,7 +37,7 @@ export function render(graphData, rootId) {
         console.warn("Container not ready (0px width). Retrying in next frame...");
         
         // schedule this same function to run again in ~16ms.
-        requestAnimationFrame(() => render(graphData, rootId)); 
+        requestAnimationFrame(() => render(graphData, rootId, onNodeClick)); 
         return; 
     }
     
@@ -157,14 +160,21 @@ export function render(graphData, rootId) {
     //     renderer(inner, graph);
     // }, 100);
 
-    
-
-    // add click handlers for nodes
+    // click feature
     svg.selectAll("g.node")
         .style("cursor", "pointer")
+
+         // 1. single click feature to highlight
         .on("click", function(event, nodeId) {
-            const node = graph.node(nodeId);
-            showStatsPanel(node.detail, graphData, nodeId);
+
+            const fullNode = graphData.get(nodeId);
+
+            // check to see if the node has source data
+            if (!fullNode || !fullNode.detail) {
+                return;
+            }
+
+            showStatsPanel(fullNode.detail, graphData, nodeId);
             
             // highlight clicked node
             svg.selectAll("g.node rect")
@@ -173,13 +183,32 @@ export function render(graphData, rootId) {
                 .style("stroke-width", "4px")
                 .style("stroke", "#ff6b6b");
 
+        })
+        
+        // 2. double click feature to refocus tree
+        .on("dblclick", function(event, nodeId) {
+
+            console.log("double clicked!", nodeId);
+            const fullNode = graphData.get(nodeId);
+
+            // check to see if the node has source data
+            if (!fullNode || !fullNode.detail) {
+                console.error("Clicked node missing from source data: ", nodeId);
+                return;
+            }
+
+            // extract mrauth_id and check if it exists
+            const mrauthId = fullNode.detail.mrauth_id;
+            if (mrauthId) {
+                console.log("Refocusing on: ", fullNode.detail.givenName);
+                if (onNodeClick) {
+                    onNodeClick(mrauthId);
+                }
+            }
+            
 
         })
-        //mouseover feature to highlight the particular node
-        // .on("mouseover", function() { 
-        //     d3.select(this).select("rect")
-        //         .style("opacity", "0.8");
-        // })
+        
         //mousever feature to give additional information on node
 
         // SAKURA: hover feature for react or yea

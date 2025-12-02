@@ -8,6 +8,13 @@ function Graph() {
   const [searchQuery, setSearchQuery] = useState('');
   const hasLoadedData = useRef(false);
 
+  // KEVIN: handleNodeClick function to trigger redraw of graph
+  function handleNodeClick(newMrauthId) {
+    if (!newMrauthId) return;
+    console.log(`Refocusing graph on ID: ${newMrauthId}`);
+    buildRenderGraph(newMrauthId);
+  }
+
   // SAKURA: buildRenderGraph function from main.js
   function buildRenderGraph(mrauth_id) {
     if (!mrauth_id) {
@@ -41,7 +48,8 @@ function Graph() {
     console.log(`Data loaded for ${myGraphData.size} nodes. Root ID: ${rootInternalId}. Rendering...`);
     
     // SAKURA: correct rootInternalId directly from the created() function
-    render(myGraphData, rootInternalId);
+    //KEVIN: added handleNodeClick for the input
+    render(myGraphData, rootInternalId, handleNodeClick);
   }
 
   // SAKURA: handleSearch function from main.js (adapted for React)
