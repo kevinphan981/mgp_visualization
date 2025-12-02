@@ -71,7 +71,7 @@ function FilterPanel({ onFilterChange }) {
                     />
                     Show Cohort Peers
                 </label>
-                {/* SAKURA: cohort peers = same year + same institution (exact match) */}
+                {/* SAKURA: cohort peers = people with same advisor */}
                 {filters.showCohortPeers && (
                     <small style={{ display: 'block', marginLeft: '1.5rem', marginTop: '0.5rem', color: '#777', fontSize: '0.8rem' }}>
                         Same year & institution

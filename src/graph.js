@@ -44,12 +44,13 @@ export function render(graphData, rootId, cohortPeerIds = new Set()) {
     };
 
     // make the graph, initially empty
-    const graph = new dagreD3.graphlib.Graph({}).setGraph({
+    const graph = new dagreD3.graphlib.Graph({ compound: true }).setGraph({
         rankdir: "TB",    // top to Bottom
         nodesep: 80,      // horizontal spacing
         ranksep: 80,      // vertical spacing
         marginx: 20,
-        marginy: 20
+        marginy: 20,
+        ranker: "tight-tree"  // Use tight-tree ranker for better control
     });
 
     // add all nodes with color
@@ -91,7 +92,8 @@ export function render(graphData, rootId, cohortPeerIds = new Set()) {
             style: `fill: ${nodeColor}; stroke: #333; stroke-width: 2px;`,
             labelStyle: "font-size: 13px; font-weight: 500; fill: #fff;",
             rx: 5,
-            ry: 5
+            ry: 5,
+            rank: level !== undefined ? -level : undefined  // Negative because dagre ranks top-to-bottom (lower rank = higher position)
         });
     }
 
@@ -102,6 +104,12 @@ export function render(graphData, rootId, cohortPeerIds = new Set()) {
         value.edges.forEach(adviseeId => {
             // only include the edge if the advisee is in the map
             if (graphData.has(adviseeId)) {
+                // SAKURA: Don't draw edge to cohort peer (maintain level 0 position)
+                if (cohortPeerIds.has(adviseeId)) {
+                    console.log(`Skipping edge from ${key} to cohort peer ${adviseeId} to maintain level 0 position`);
+                    return;
+                }
+                
                 graph.setEdge(key, adviseeId, {
                     curve: d3.curveBasis,
                     style: "stroke: #666; stroke-width: 2px;",
@@ -110,10 +118,11 @@ export function render(graphData, rootId, cohortPeerIds = new Set()) {
             }
         });
 
-        // SAKURA: advisor edges - skip if target is a cohort peer
+        // anne: advisor edges - skip drawing hierarchical edges for cohort peers in dagre
+        // (we'll draw them manually later to avoid affecting layout)
         value.advisors.forEach(advisorId => {
             if (graphData.has(advisorId)) {
-                // SAKURA: Don't draw edge if the current node (key) is a cohort peer
+                // anne: Don't draw edge if the current node (key) is a cohort peer
                 // This prevents cohort peers from being placed below their advisors
                 if (cohortPeerIds.has(key)) {
                     console.log(`Skipping edge from advisor ${advisorId} to cohort peer ${key} to maintain level 0 position`);
@@ -129,19 +138,26 @@ export function render(graphData, rootId, cohortPeerIds = new Set()) {
         });
     }
 
-    // SAKURA: I WILL KILL MYSELF THIS DOESNT WORK
-    // Create visible edges from root to each cohort peer (no arrow, different style)
-    for (const peerId of cohortPeerIds) {
-        if (graph.hasNode(peerId) && peerId !== rootId) {
-            graph.setEdge(rootId, peerId, {
-                curve: d3.curveBasis,
-                style: "stroke: #5e734e; stroke-width: 1.5px; stroke-dasharray: 5, 5;",  // Dashed line in root color
-                label: " "
-            });
-            console.log(`Added cohort edge from root ${rootId} to cohort peer ${peerId}`);
+    // anne: Create a subgraph to group root and cohort peers at same rank
+    if (cohortPeerIds.size > 0) {
+        const rankGroupId = "rank0";
+        graph.setNode(rankGroupId, {
+            label: "",
+            clusterLabelPos: 'top',
+            style: 'fill: none; stroke: none;'  // Invisible container
+        });
+        
+        // Add root to the rank group
+        graph.setParent(rootId, rankGroupId);
+        
+        // Add all cohort peers to the same rank group
+        for (const peerId of cohortPeerIds) {
+            if (graph.hasNode(peerId) && peerId !== rootId) {
+                graph.setParent(peerId, rankGroupId);
+                console.log(`Added cohort peer ${peerId} to rank group with root`);
+            }
         }
     }
-    // SAKURA: I WILL KILL MYSELF THIS DOESNT WORK
 
     // set up scene
     const svg = d3.select("div#container").select("svg"),
@@ -160,6 +176,53 @@ export function render(graphData, rootId, cohortPeerIds = new Set()) {
     const renderer = new dagreD3.render();
     // run render to draw graph
     renderer(inner, graph);
+    
+    // anne: Add horizontal lines connecting root to cohort peers
+    // AND advisor lines for cohort peers
+    if (cohortPeerIds.size > 0) {
+        for (const peerId of cohortPeerIds) {
+            if (peerId !== rootId && graph.node(peerId) && graph.node(rootId)) {
+                const rootNode = graph.node(rootId);
+                const peerNode = graph.node(peerId);
+                
+                // Draw a horizontal dashed line between root and cohort peer
+                inner.append("line")
+                    .attr("x1", rootNode.x)
+                    .attr("y1", rootNode.y)
+                    .attr("x2", peerNode.x)
+                    .attr("y2", peerNode.y)
+                    .attr("stroke", "#5e734e")
+                    .attr("stroke-width", "1.5")
+                    .attr("stroke-dasharray", "5, 5")
+                    .attr("class", "cohort-peer-line")
+                    .lower(); // Send to back so it doesn't cover nodes
+                
+                console.log(`Drew line from root (${rootNode.x}, ${rootNode.y}) to cohort peer ${peerId} (${peerNode.x}, ${peerNode.y})`);
+                
+                // anne: Draw lines from cohort peer to their advisors
+                const peerData = graphData.get(peerId);
+                if (peerData && peerData.advisors) {
+                    peerData.advisors.forEach(advisorId => {
+                        if (graph.node(advisorId)) {
+                            const advisorNode = graph.node(advisorId);
+                            
+                            // Draw advisor edge using d3 path (similar to other edges)
+                            inner.append("path")
+                                .attr("d", `M${advisorNode.x},${advisorNode.y} L${peerNode.x},${peerNode.y}`)
+                                .attr("stroke", "#999")
+                                .attr("stroke-width", "2")
+                                .attr("fill", "none")
+                                .attr("class", "cohort-advisor-edge")
+                                .attr("marker-end", "url(#arrowhead)")
+                                .lower();
+                            
+                            console.log(`Drew advisor edge from ${advisorId} to cohort peer ${peerId}`);
+                        }
+                    });
+                }
+            }
+        }
+    }
 
     // add click handlers for nodes
     svg.selectAll("g.node")
