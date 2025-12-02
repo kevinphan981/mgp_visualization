@@ -14,7 +14,7 @@ export async function loadData(params) {
     if (dataCache) return; // we let it pass
 
     try {
-        const response = await fetch("/sample-data/all_academics_merged_complete.json")
+        const response = await fetch("/sample-data/all_academics_merged_full.json")
         if (!response.ok) {
             throw new Error(`HTTP error status: ${response.status}`)
         }
@@ -193,6 +193,7 @@ export function created(rootMrauthId) {
     let rootId = null;
     for (const key in dataCache) {
         const academic = dataCache[key]?.MGP_academic;
+        //// KEVIN: change conditional from === to == less strict
         if (academic && academic.mrauth_id === rootMrauthId) {
             rootId = academic.ID; // ** e.g., "258" could be made rootId = key if something is off
             break; // yessah

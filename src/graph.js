@@ -147,7 +147,7 @@ export function render(graphData, rootId, onNodeClick) {
     const zoom = d3.zoom().on("zoom", function(event) {
         inner.attr("transform", event.transform);
     });
-    svg.call(zoom);
+    svg.call(zoom).on("dblclick.zoom", null);
 
     
 
@@ -204,12 +204,22 @@ export function render(graphData, rootId, onNodeClick) {
                 if (onNodeClick) {
                     onNodeClick(mrauthId);
                 }
+
+            //     //KEVIN: things don't load, so we have to tell them no data
+            //    else {
+            //         alert(`Cannot load tree for ${fullNode.detail.givenName} because they do not graph data.`);
+        
+            //         // shake the node or flash it red to indicate error (requires more CSS)
+            //         d3.select(this).select("rect")
+            //             .transition().duration(100).style("stroke", "red")
+            //             .transition().duration(100).style("stroke", "#ff6b6b");
+            //     }
             }
             
 
         })
         
-        //mousever feature to give additional information on node
+        //mouseover feature to give additional information on node
 
         // SAKURA: hover feature for react or yea
         .on("mouseover", function(event, nodeId) {

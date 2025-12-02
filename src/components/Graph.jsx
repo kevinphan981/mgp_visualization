@@ -21,8 +21,8 @@ function Graph() {
       console.error("No ID provided to render.");
       return;
     }
-    
-    console.log(`Building graph for mrauth_id: ${mrauth_id}`);
+
+    console.log(`[Graph.jsx] Requesting build for: ${mrauth_id}`);    
     
     // SAKURA: making subgraph data 
     const result = created(mrauth_id);
@@ -31,7 +31,8 @@ function Graph() {
       console.error(`Failed to create graph data for ID: ${mrauth_id}`);
       return;
     }
-    
+
+
     const { graphData: myGraphData, rootInternalId } = result;
     
     // SAKURA: verify we have both valid data and a valid root ID
