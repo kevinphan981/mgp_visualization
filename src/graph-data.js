@@ -14,7 +14,7 @@ export async function loadData(params) {
     if (dataCache) return; // we let it pass
 
     try {
-        const response = await fetch("/sample-data/all_academics_merged_full.json")
+        const response = await fetch("/sample-data/all_academics_merged_complete.json")
         if (!response.ok) {
             throw new Error(`HTTP error status: ${response.status}`)
         }
@@ -118,7 +118,6 @@ function addNodeToMap(map, dataCache, id) {
         const degreeWithThesis = degrees.find(d => d.thesis_title);
         thesis = degreeWithThesis ? degreeWithThesis.thesis_title : "";
     }
-
     // 4. FINDING DESCENDANT COUNT
     let trueDescCount = "N/A";
     const descendants = academic?.student_data?.descendants;
@@ -126,9 +125,6 @@ function addNodeToMap(map, dataCache, id) {
     if (descendants && descendants.descendant_count !== undefined) {    
         trueDescCount = descendants.descendant_count || "0";
     }
-
-
-
     /*
         KEVIN: More Details to pre-existing details
         1. schools
@@ -144,7 +140,7 @@ function addNodeToMap(map, dataCache, id) {
         internal_id: id,
         true_desc_count: trueDescCount,
         school: school,
-        thesis: thesis
+        thesis: thesis 
     };
 
     // SAKURA: filter out null and empty values
@@ -182,21 +178,152 @@ function addNodeToMap(map, dataCache, id) {
     });
 }
 
+// SAKURA: I WILL KILL MYSELF THIS DOESNT WORK
+// anne: find cohort peers from cached data (people with same advisor)
+function findCohortPeers(rootInternalId, dataCache) {
+    const rootAcademic = getAcademicData(dataCache, rootInternalId);
+    if (!rootAcademic) return [];
+    
+    // get root's advisors from degrees
+    const rootAdvisorIds = [];
+    rootAcademic.student_data.degrees.forEach(degree => {
+        if (degree["advised by"]) {
+            Object.keys(degree["advised by"]).forEach(advisorId => {
+                if (advisorId && advisorId.trim() !== "") {
+                    rootAdvisorIds.push(advisorId);
+                }
+            });
+        }
+    });
+    
+    if (rootAdvisorIds.length === 0) {
+        console.log("Root has no advisors, cannot find cohort peers");
+        return [];
+    }
+    
+    // Get root's students (to exclude them from cohort peers)
+    const rootStudentIds = rootAcademic.student_data.descendants.advisees
+        .map(adviseeVal => {
+            if (Array.isArray(adviseeVal) && adviseeVal.length > 0) {
+                return String(adviseeVal[0]).trim();
+            }
+            return null;
+        })
+        .filter(id => id !== null && id.trim() !== "");
+    
+    console.log(`Finding cohort peers: people who share advisor(s) with root (${rootAdvisorIds.length} advisors), excluding ${rootStudentIds.length} direct students`);
+    
+    const cohortPeers = [];
+    
+    // loop through all academics in cache
+    for (const key in dataCache) {
+        // skip the root node itself
+        if (key === rootInternalId) continue;
+        
+        // IMPORTANT: skip root's direct students - they are not peers!
+        if (rootStudentIds.includes(key)) {
+            console.log(`Skipping ${key} - is a direct student of root, not a cohort peer`);
+            continue;
+        }
+        
+        const academic = dataCache[key]?.MGP_academic;
+        if (!academic) continue;
+        
+        // get peer's advisors from degrees
+        const peerAdvisorIds = [];
+        academic.student_data.degrees.forEach(degree => {
+            if (degree["advised by"]) {
+                Object.keys(degree["advised by"]).forEach(advisorId => {
+                    if (advisorId && advisorId.trim() !== "") {
+                        peerAdvisorIds.push(advisorId);
+                    }
+                });
+            }
+        });
+        
+        if (peerAdvisorIds.length === 0) continue;
+        
+        // check if they share at least one advisor with root
+        const sharedAdvisors = rootAdvisorIds.filter(advisorId => 
+            peerAdvisorIds.includes(advisorId)
+        );
+        
+        if (sharedAdvisors.length > 0) {
+            cohortPeers.push(academic.ID); // use internal ID
+            console.log(`Found cohort peer: ${academic.given_name} ${academic.family_name} (shares ${sharedAdvisors.length} advisor(s))`);
+        }
+    }
+    
+    console.log(`Found ${cohortPeers.length} cohort peers (same advisor)`);
+    return cohortPeers;
+}
+// SAKURA: I WILL KILL MYSELF THIS DOESNT WORK
+
 /*
     function: created()
-    - Accepts a rootMrauthId
+    - Accepts a rootMrauthId and optional filters
     - Fetches the JSON
     - Finds the matching internal ID
-    - Builds a small map for that person and their children
+    - Builds a small map for that person and their children (filtered)
     - Returns both the map AND the internal ID of the root
 */
-export function created(rootMrauthId) {
+export function created(rootMrauthId, filters = {}) {
+    // SAKURA: default filters if not provided
+    const {
+        university = '',
+        yearMin = 1800,
+        yearMax = 2024,
+        showAdvisors = true,
+        showCohortPeers = true,
+        showStudents = true
+    } = filters;
 
-    //we use the dataCache to be the way the data is stored, this makes it faster
-    // alternative to the asynchronous method
     if (!dataCache) {
         console.error("Data not yet loaded, will not make graph.")
         return null;
+    }
+    
+    // SAKURA: helper function to check if a node passes filters
+    function passesFilters(nodeId) {
+        const academic = getAcademicData(dataCache, nodeId);
+        if (!academic) return false;
+
+        // university filter
+        if (university && university.trim() !== '') {
+            const degrees = academic?.student_data?.degrees || [];
+            const matchesUniversity = degrees.some(degree => 
+                degree.schools && degree.schools.some(school => 
+                    school.toLowerCase().includes(university.toLowerCase())
+                )
+            );
+            if (!matchesUniversity) {
+                console.log(`Filtered out ${academic.given_name} ${academic.family_name}: university mismatch`);
+                return false;
+            }
+        }
+
+        // year filter
+        const degrees = academic?.student_data?.degrees || [];
+        let nodeYear = null;
+        
+        if (degrees.length > 0) {
+            const phdDegree = degrees.find(d => d.degree_type === "Ph.D.");
+            if (phdDegree && phdDegree.degree_year) {
+                nodeYear = parseInt(phdDegree.degree_year);
+            } else {
+                const lastDegree = degrees[degrees.length - 1];
+                if (lastDegree?.degree_year) {
+                    nodeYear = parseInt(lastDegree.degree_year);
+                }
+            }
+        }
+        
+        if (nodeYear && (nodeYear < yearMin || nodeYear > yearMax)) {
+            console.log(`Filtered out ${academic.given_name} ${academic.family_name}: year ${nodeYear} outside range ${yearMin}-${yearMax}`);
+            return false;
+        }
+
+        return true;
     }
     
     let myMap = new Map();
@@ -205,38 +332,121 @@ export function created(rootMrauthId) {
     let rootId = null;
     for (const key in dataCache) {
         const academic = dataCache[key]?.MGP_academic;
-        //// KEVIN: change conditional from === to == less strict
         if (academic && academic.mrauth_id === rootMrauthId) {
-            rootId = academic.ID; // ** e.g., "258" could be made rootId = key if something is off
-            break; // yessah
+            rootId = academic.ID;
+            break;
         }
     }
 
-    // catches if there is no such id
     if (!rootId) {
         console.error(`Could not find academic with mrauth_id ${rootMrauthId}`);
         return null;
     }
     console.log(`Found internal ID ${rootId} for mrauth_id ${rootMrauthId}`);
     
-    // add node to the map using helper
+    // SAKURA: add root node to the map (always include the root)
     addNodeToMap(myMap, dataCache, rootId);
 
-    // retrieves the edges of the root node (only the children thus far)
+    // retrieves the edges of the root node
     const rootNode = myMap.get(rootId);
     
+    // SAKURA: I WILL KILL MYSELF THIS DOESNT WORK
+    const cohortPeerIds = new Set();
+    
+    if (showCohortPeers) {
+        const cohortPeers = findCohortPeers(rootId, dataCache);
+        
+        for (const peerId of cohortPeers) {
+            if (passesFilters(peerId)) {
+                cohortPeerIds.add(peerId); // Add to cohort set FIRST
+                addNodeToMap(myMap, dataCache, peerId); // Add cohort peer to the graph
+                console.log(`Added cohort peer: ${peerId}`);
+            }
+        }
+    }
+    // SAKURA: I WILL KILL MYSELF THIS DOESNT WORK
+    
     if (rootNode) {
-        // go down & add all children (advisees)
-        for (const adviseeId of rootNode.edges) {
-            addNodeToMap(myMap, dataCache, adviseeId);
+        // SAKURA: go down & add all children (advisees) if showStudents is true
+        if (showStudents) {
+            for (const adviseeId of rootNode.edges) {
+                // SAKURA: Skip if this student is a cohort peer (handle as cohort, not student)
+                if (cohortPeerIds.has(adviseeId)) {
+                    console.log(`Skipping ${adviseeId} as student - is cohort peer`);
+                    continue;
+                }
+                if (passesFilters(adviseeId)) {
+                    addNodeToMap(myMap, dataCache, adviseeId);
+                }
+            }
         }
 
-        // go up add parents (advisors)
-        for (const advisorId of rootNode.advisors) {
-            addNodeToMap(myMap, dataCache, advisorId);
+        // SAKURA: go up add parents (advisors) if showAdvisors is true
+        if (showAdvisors) {
+            // add root's advisors
+            for (const advisorId of rootNode.advisors) {
+                // SAKURA: skip if this advisor is a cohort peer (handle as cohort, not advisor)
+                if (cohortPeerIds.has(advisorId)) {
+                    console.log(`Skipping ${advisorId} as advisor - is cohort peer`);
+                    continue;
+                }
+                if (passesFilters(advisorId)) {
+                    addNodeToMap(myMap, dataCache, advisorId);
+                }
+            }
+            
+            // SAKURA: Only add cohort peers' advisors if cohort peers filter is OFF
+            // When both filters are on, only show the root's advisors
+            if (!showCohortPeers) {
+                for (const peerId of cohortPeerIds) {
+                    const peerData = dataCache[peerId]?.MGP_academic;
+                    if (!peerData) continue;
+                    
+                    // get advisors from peer's degrees
+                    const peerAdvisors = [];
+                    peerData.student_data.degrees.forEach(degree => {
+                        if (degree["advised by"]) {
+                            Object.keys(degree["advised by"]).forEach(advisorId => {
+                                if (advisorId && advisorId.trim() !== "") {
+                                    peerAdvisors.push(advisorId);
+                                }
+                            });
+                        }
+                    });
+                    
+                    // add each advisor (skip if they're also a cohort peer)
+                    for (const advisorId of peerAdvisors) {
+                        if (cohortPeerIds.has(advisorId)) {
+                            console.log(`Skipping ${advisorId} as cohort peer advisor - is also cohort peer`);
+                            continue;
+                        }
+                        if (passesFilters(advisorId) && !myMap.has(advisorId)) {
+                            addNodeToMap(myMap, dataCache, advisorId);
+                            console.log(`Added advisor ${advisorId} of cohort peer ${peerId}`);
+                        }
+                    }
+                }
+            }
+            // SAKURA: I WILL KILL MYSELF THIS DOESNT WORK
+        }
+
+        // SAKURA: NOW add cohort peers to the map (after identifying them above)
+        if (showCohortPeers) {
+            for (const peerId of cohortPeerIds) {
+                if (!myMap.has(peerId)) {
+                    addNodeToMap(myMap, dataCache, peerId);
+                    console.log(`Added cohort peer ${peerId} to graph`);
+                }
+            }
         }
     }
     
-    // SAKURA: return both the map and the root internal ID
-    return { graphData: myMap, rootInternalId: rootId };
+    console.log(`Graph created with ${myMap.size} nodes (filters applied: university="${university}", years=${yearMin}-${yearMax}, advisors=${showAdvisors}, students=${showStudents}, cohort peers=${cohortPeerIds.size})`);
+    
+    // SAKURA: return both the map, root internal ID, and cohort peer IDs
+    return { 
+        graphData: myMap, 
+        rootInternalId: rootId,
+        cohortPeerIds: cohortPeerIds
+    };
 }
