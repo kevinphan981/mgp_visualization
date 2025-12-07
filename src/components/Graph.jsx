@@ -10,6 +10,7 @@ function Graph() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentMrauthId, setCurrentMrauthId] = useState("462675");
+  const [focusedName, setFocusedName] = useState('');
   const [filters, setFilters] = useState({
     university: '',
     yearMin: 1800,
@@ -53,6 +54,13 @@ function Graph() {
     
     console.log(`Data loaded for ${myGraphData.size} nodes. Root ID: ${rootInternalId}. Rendering...`);
     
+    // anne: grab and set the focused mathematician's name
+    const rootNode = myGraphData.get(rootInternalId);
+    if (rootNode && rootNode.detail) {
+      const fullName = `${rootNode.detail.givenName} ${rootNode.detail.familyName}`.trim();
+      setFocusedName(fullName);
+    }
+    
     // SAKURA: correct rootInternalId directly from the created() function
     // KEVIN: added handleNodeClick for the input
     render(myGraphData, rootInternalId, handleNodeClickRef.current, cohortPeerIds || new Set());
@@ -73,22 +81,6 @@ function Graph() {
   }, [buildRenderGraph]); 
 
    handleNodeClickRef.current = handleNodeClick;
-  // // SAKURA: handleSearch function from main.js (adapted for React)
-  // function handleSearch(event) {
-  //   event.preventDefault();
-    
-  //   if (!searchQuery) return;
-    
-  //   console.log(`Searching for name: ${searchQuery}`);
-  //   const mrauth_id = findIdByName(searchQuery);
-    
-  //   if (mrauth_id) {
-  //     setCurrentMrauthId(mrauth_id);
-  //     buildRenderGraph(mrauth_id, filters);
-  //   } else {
-  //     alert(`Cannot find a match for ${searchQuery}`);
-  //   }
-  // }
 
   //KEVIN: handleSearch constant to deal with the query
   const handleSearch = (e) => {
@@ -177,7 +169,7 @@ function Graph() {
     }
     
     initializeData();
-  }, [buildRenderGraph, filters]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // SAKURA: re-render when filters change
   useEffect(() => {
@@ -233,6 +225,11 @@ function Graph() {
 
       <div className="content-container" style={{ display: isLoading ? 'none' : 'flex' }}>
         <div id="container" className="graph-container">
+          {focusedName && (
+            <div className="focused-name-display">
+              {focusedName}
+            </div>
+          )}
           <svg><g/></svg>
         </div>
         
