@@ -65,21 +65,27 @@ function Graph() {
   handleNodeClickRef.current = handleNodeClick;
 
   // SAKURA: handleSearch function from main.js (adapted for React)
-  function handleSearch(event) {
-    event.preventDefault();
-    
-    if (!searchQuery) return;
-    
-    console.log(`Searching for name: ${searchQuery}`);
-    const mrauth_id = findIdByName(searchQuery);
-    
-    if (mrauth_id) {
-      setCurrentMrauthId(mrauth_id);
-      buildRenderGraph(mrauth_id, filters);
-    } else {
-      alert(`Cannot find a match for ${searchQuery}`);
-    }
+  // SAKURA: handleSearch function with better error message
+function handleSearch(event) {
+  event.preventDefault();
+  
+  if (!searchQuery) return;
+  
+  console.log(`Searching for name: ${searchQuery}`);
+  const mrauth_id = findIdByName(searchQuery);
+  
+  if (mrauth_id) {
+    setCurrentMrauthId(mrauth_id);
+    buildRenderGraph(mrauth_id, filters);
+  } else {
+    // SAKURA: error message for exact match requirement
+    alert(
+      `Mathematician "${searchQuery}" not found.\n\n` +
+      `Please enter the full name exactly (case-insensitive).\n` +
+      `Example: "Dio Lewis Holl"\n\n`
+    );
   }
+}
 
   // SAKURA: filter change handler
   function handleFilterChange(newFilters) {

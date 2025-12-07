@@ -1,17 +1,13 @@
 //KEVIN: remove 'fuzzyset.js' through npm because of conflict, idk if this error shows up for everyone else
-
-import FuzzySet from 'fuzzyset' 
 // const FuzzySet = require('fuzzyset.js'); keep just in case
 
 // caches for data and search
 let dataCache = null;
-let nameSearchSet = null;
 let nameToIdMap = new Map();
 
 //loads all the data and then builds a search function
-
 export async function loadData(params) {
-    if (dataCache) return; // we let it pass
+    if (dataCache) return;
 
     try {
         const response = await fetch("/sample-data/all_academics_merged_complete.json")
@@ -19,53 +15,43 @@ export async function loadData(params) {
             throw new Error(`HTTP error status: ${response.status}`)
         }
 
-        dataCache = await response.json() //we load everything
+        dataCache = await response.json();
 
-        // search indexing method
-
-        const nameList = [];
+        // Build name-to-ID map for exact matching
         for (const key in dataCache) {
             const academic = dataCache[key]?.MGP_academic;
             if (academic && academic.mrauth_id) {
                 const fullName = `${academic.given_name} ${academic.family_name}`;
-                nameList.push(fullName);
                 nameToIdMap.set(fullName.toLowerCase(), academic.mrauth_id);
             }
         }
 
-        nameSearchSet = FuzzySet(nameList); //points towards fuzzyset in the global library
-        console.log("Data is loaded with search index");
+        console.log(`Data loaded: ${nameToIdMap.size} academics indexed`);
     } catch(e) {
         console.error("Failed to fetch/parse JSON data: ", e);
     }
 }
 
-// id finder method, takes the query and should output the specific id
-// SAKURA: this is sus it takes the "best" result but it's not accurate (ex "chyba" will give Jie Du) 
-// prob fix later or whatever
-
+// SAKURA: exact match only - no fuzzy search
 export function findIdByName(queryName) {
-
-    //relies on the nameSearchSet to look through for the id
-    if (!nameSearchSet) {
+    if (!nameToIdMap) {
         console.error("Search index does not yet exist.");
         return null;
     }
-
-    //leverage fuzzysets to approximate the right result
-    const results = nameSearchSet.get(queryName);
-    if (!results || results.length === 0) {
-        console.warn(`No match found: ${queryName}`);
-        return null; //no match
+    
+    // Try exact match (case-insensitive)
+    const normalizedQuery = queryName.trim().toLowerCase();
+    const mrauth_id = nameToIdMap.get(normalizedQuery);
+    
+    if (mrauth_id) {
+        console.log(`Found exact match for "${queryName}"`);
+        return mrauth_id;
     }
-
-    // we take the BEST result, but it could be expanded upon to give a list of options as well.
-    const closestResult = results[0][1];
-
-    return nameToIdMap.get(closestResult.toLowerCase());
+    
+    // No exact match found
+    console.warn(`No exact match found for "${queryName}"`);
+    return null;
 }
-
-
 
 // helper function to parse the right data from json
 function getAcademicData(allData, id) {
