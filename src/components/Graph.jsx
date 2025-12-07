@@ -57,6 +57,14 @@ function Graph() {
     render(myGraphData, rootInternalId, handleNodeClickRef.current, cohortPeerIds || new Set());
   }, [filters]);
 
+    // move nodeclick after bruhhhh
+  const handleNodeClick = useCallback((newMrauthId) => {
+    if (!newMrauthId) return;
+    console.log(`Refocusing graph on ID: ${newMrauthId}`);
+    buildRenderGraph(newMrauthId);
+  }, [buildRenderGraph]); 
+
+   handleNodeClickRef.current = handleNodeClick;
   // // SAKURA: handleSearch function from main.js (adapted for React)
   // function handleSearch(event) {
   //   event.preventDefault();
