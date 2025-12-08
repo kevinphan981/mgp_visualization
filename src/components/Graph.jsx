@@ -1,35 +1,49 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { loadData, findIdByName, created, getSuggestions} from '../graph-data.js';
 import { render } from '../graph.js';
-import { loadData, findIdByName, created } from '../graph-data.js';
+import FilterPanel from './FilterPanel';
 import './Graph.css';
 
 function Graph() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [currentMrauthId, setCurrentMrauthId] = useState("462675");
+  const [focusedName, setFocusedName] = useState('');
+  const [filters, setFilters] = useState({
+    university: '',
+    yearMin: 1800,
+    yearMax: 2024,
+    showAdvisors: true,
+    showCohortPeers: true,
+    showStudents: true
+  });
   const hasLoadedData = useRef(false);
+  const handleNodeClickRef = useRef(null);
 
-  // SAKURA: buildRenderGraph function from main.js
-  function buildRenderGraph(mrauth_id) {
+  // KEVIN: handleNodeClick function to trigger redraw of graph
+  // SAKURA: buildRenderGraph function from main.js (wrapped in useCallback)
+  const buildRenderGraph = useCallback((mrauth_id, activeFilters = filters) => {
     if (!mrauth_id) {
       console.error("No ID provided to render.");
       return;
     }
+
+    console.log(`[Graph.jsx] Requesting build for: ${mrauth_id}`);    
     
-    console.log(`Building graph for mrauth_id: ${mrauth_id}`);
-    
-    // SAKURA: making subgraph data 
-    const result = created(mrauth_id);
+    const result = created(mrauth_id, activeFilters);
     
     if (!result) {
       console.error(`Failed to create graph data for ID: ${mrauth_id}`);
       return;
     }
     
-    const { graphData: myGraphData, rootInternalId } = result;
+    const { graphData: myGraphData, rootInternalId, cohortPeerIds } = result;
     
-    // SAKURA: verify we have both valid data and a valid root ID
     if (!myGraphData || myGraphData.size === 0) {
       console.error(`No graph data created for ID: ${mrauth_id}`);
+      // alert("The selected academic does not match the current filters.");
       return;
     }
     
@@ -40,63 +54,161 @@ function Graph() {
     
     console.log(`Data loaded for ${myGraphData.size} nodes. Root ID: ${rootInternalId}. Rendering...`);
     
+    // anne: grab and set the focused mathematician's name
+    const rootNode = myGraphData.get(rootInternalId);
+    if (rootNode && rootNode.detail) {
+      const fullName = `${rootNode.detail.givenName} ${rootNode.detail.familyName}`.trim();
+      setFocusedName(fullName);
+    }
+    
     // SAKURA: correct rootInternalId directly from the created() function
-    render(myGraphData, rootInternalId);
+    // KEVIN: added handleNodeClick for the input
+    render(myGraphData, rootInternalId, handleNodeClickRef.current, cohortPeerIds || new Set());
+  }, [filters]);
+
+    // move nodeclick after bruhhhh
+  const handleNodeClick = useCallback((newMrauthId) => {
+    if (!newMrauthId) return;
+    console.log(`Refocusing graph on ID: ${newMrauthId}`);
+
+    //reset the searchQuery as empty ''
+    setSearchQuery('');
+
+    //also reset the node of focus to what newMrauthId
+    setCurrentMrauthId(newMrauthId);
+
+    buildRenderGraph(newMrauthId);
+  }, [buildRenderGraph]); 
+
+   handleNodeClickRef.current = handleNodeClick;
+
+  //KEVIN: handleSearch constant to deal with the query
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setShowSuggestions(false);
+    
+    // exact match check first
+    let targetId = findIdByName(searchQuery);
+    
+    if (!targetId) {
+      // try fuzzy search if no exact match found
+      const fuzzyResults = getSuggestions(searchQuery);
+      if (fuzzyResults && fuzzyResults.length > 0) {
+        // take the best match
+        targetId = fuzzyResults[0].id;
+        setSearchQuery(fuzzyResults[0].name); // autocorrect the input
+      }
+    }
+
+    if (targetId) {
+      setCurrentMrauthId(targetId);
+      buildRenderGraph(targetId, filters);
+    } else {
+      alert("Academic not found! Try checking the spelling.");
+    }
+  };
+
+  // SAKURA: filter change handler
+  function handleFilterChange(newFilters) {
+    console.log("Filters updated:", newFilters);
+    setFilters(newFilters);
   }
 
-  // SAKURA: handleSearch function from main.js (adapted for React)
-  function handleSearch(event) {
-    event.preventDefault(); // stops the form from reloading the page
-    
-    if (!searchQuery) return; // we get nothing
-    
-    console.log(`Searching for name: ${searchQuery}`);
-    const mrauth_id = findIdByName(searchQuery);
-    
-    // if the ID exists, then we should render the graph
-    if (mrauth_id) {
-      buildRenderGraph(mrauth_id);
+  //KEVIN: autocomplete logic
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    if (value.length > 1) {
+      try {
+        const results = getSuggestions(value);
+        console.log("[autocomplete] query:", value, " -> results:", results);
+        setSuggestions(results);
+        // setSuggestions(true); 
+        setShowSuggestions(results.length > 0);
+      } catch (err){
+        console.error("[autocomplete] getSuggestions error:", err);
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
     } else {
-      alert(`Cannot find a match for ${searchQuery}`);
+      setSuggestions([]);
+      setShowSuggestions(false);
     }
   }
+
+  const handleSuggestionClick = (suggestion) => {
+    setSearchQuery(suggestion.name);
+    setShowSuggestions(false);
+    setCurrentMrauthId(false);
+    buildRenderGraph(suggestion.id, filters);
+  }
+
+  // hide suggestions when clicking outside/blurring
+  const handleBlur = () => {
+    // Delay hiding to allow click event on suggestion to fire first
+    setTimeout(() => {
+      setShowSuggestions(false);
+    }, 200);
+  };
 
   // SAKURA: main() function from main.js (converted to useEffect)
   useEffect(() => {
     async function initializeData() {
       if (hasLoadedData.current) return;
       
-      // load all data into memory
       console.log("Loading academic data...");
       await loadData();
       console.log("Data loaded.");
       
-      // default render is The Dio Holl fella
-      buildRenderGraph("462675");
+      buildRenderGraph("462675", filters);
       
       setIsLoading(false);
       hasLoadedData.current = true;
     }
     
     initializeData();
-  }, []); // empty dependency array = runs once on mount (like main())
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // SAKURA: re-render when filters change
+  useEffect(() => {
+    if (!isLoading && currentMrauthId) {
+      buildRenderGraph(currentMrauthId, filters);
+    }
+  }, [filters, buildRenderGraph, currentMrauthId, isLoading]);
 
   return (
     <div className="graph-wrapper">
       <div className="search-section">
-        {/* SAKURA: replaces the form with id="single_name_form" from main.js */}
         <form onSubmit={handleSearch} className="search-form">
           <label>
             Enter a name:
-            {/* SAKURA: replaces the input with id="single_name_input" from main.js */}
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Dio Lewis Holl"
-              autoComplete="off"
-              disabled={isLoading}
-            />
+            <div className="autocomplete-wrapper">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}
+                placeholder="Dio Lewis Holl"
+                autoComplete="off"
+                disabled={isLoading}
+              />
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="suggestions-dropdown">
+                  {suggestions.map((s, index) => (
+                    <div 
+                      key={`${s.id}-${index}`} 
+                      className="suggestion-item"
+                      onClick={() => handleSuggestionClick(s)}
+                    >
+                      <span className="suggestion-name">{s.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </label>
           <button type="submit" disabled={isLoading}>
             Search
@@ -111,15 +223,21 @@ function Graph() {
         </div>
       )}
 
-      {/* SAKURA: container from HTML that D3 renders into */}
-      <div id="container" style={{ display: isLoading ? 'none' : 'block' }}>
-        <svg><g/></svg>
+      <div className="content-container" style={{ display: isLoading ? 'none' : 'flex' }}>
+        <div id="container" className="graph-container">
+          {focusedName && (
+            <div className="focused-name-display">
+              {focusedName}
+            </div>
+          )}
+          <svg><g/></svg>
+        </div>
+        
+        <FilterPanel onFilterChange={handleFilterChange} />
       </div>
       
-      {/* SAKURA: stats panel that gets populated by graph.js for later? */}
       <div id="stats-panel"></div>
     </div>
   );
 }
-
 export default Graph;

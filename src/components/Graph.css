@@ -3,6 +3,22 @@
   margin: 2rem 0;
 }
 
+.focused-name-display {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  pointer-events: none;
+  border: 2px solid #5e734e;
+}
+
 .search-section {
   margin-bottom: 2rem;
   padding: 1rem;
@@ -25,6 +41,49 @@
   font-weight: 500;
 }
 
+
+/* KEVIN: autocomplete container */
+.autocomplete-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* drop down */
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  margin-top: 2px;
+}
+
+/* individual item for suggestion */
+.suggestion-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* FIX: Add padding here for internal spacing */
+  padding: 0.5rem 1rem; 
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover {
+  background-color: #f0f0f0;
+}
+
 .search-form input {
   padding: 0.5rem 1rem;
   font-size: 1rem;
@@ -32,6 +91,7 @@
   border-radius: 4px;
   min-width: 300px;
 }
+
 
 .search-form button {
   padding: 0.5rem 1.5rem;
@@ -75,8 +135,23 @@
   100% { transform: rotate(360deg); }
 }
 
-#container {
+/* new container for graph and filter panel */
+.content-container {
+  display: flex;
+  gap: 1.5rem;
   width: 100%;
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.graph-container {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+#container {
   min-height: 600px;
   border: 1px solid #ccc;
   border-radius: 8px;
@@ -99,7 +174,7 @@
 }
 
 .node text {
-  font-weight: 300;
+  font-weight: 500;
   font-family: sans-serif;
 }
 
@@ -109,26 +184,12 @@
   fill: none;
 }
 
-#stats-panel {
-  position: fixed;
-  right: 20px;
-  top: 120px;
-  background: white;
-  border: 2px solid #5e734e;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  max-width: 320px;
-  z-index: 1000;
+/* anne: hide arrow */
+.edgePath marker,
+.edgePath defs,
+marker#arrowhead,
+marker[id^="arrowhead"] {
   display: none;
-}
-
-#stats-panel h3 {
-  margin: 0 0 1rem 0;
-  color: #5e734e;
-  border-bottom: 2px solid #5e734e;
-  padding-bottom: 0.5rem;
-  font-size: 1.25rem;
 }
 
 #stats-panel {
@@ -152,4 +213,13 @@
   text-align: right;
   color: #333;
   flex: 1;
+}
+@media (max-width: 1200px) {
+  .content-container {
+    flex-direction: column;
+  }
+  
+  .graph-container {
+    width: 100%;
+  }
 }
