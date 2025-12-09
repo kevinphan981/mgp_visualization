@@ -10,12 +10,11 @@ let nameToIdMap = new Map();
 let universitySearchSet = null;
 
 //loads all the data and then builds a search function
-
 export async function loadData(params) {
     if (dataCache) return; // we let it pass
 
     try {
-        const response = await fetch("https://github.com/sakuraet/mgp_visualization/releases/download/v1/everything.json");
+        const response = await fetch('/api/data');  // ← FIXED THIS LINE
         if (!response.ok) {
             throw new Error(`HTTP error status: ${response.status}`)
         }
