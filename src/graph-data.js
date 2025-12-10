@@ -10,6 +10,7 @@ let nameToIdMap = new Map();
 let universitySearchSet = null;
 
 //loads all the data and then builds a search function
+
 export async function loadData(params) {
     if (dataCache) return; // we let it pass
 
@@ -473,10 +474,17 @@ export function created(rootMrauthId, filters = {}) {
     
     console.log(`Graph created with ${myMap.size} nodes (filters applied: university="${university}", years=${yearMin}-${yearMax}, advisors=${showAdvisors}, students=${showStudents}, cohort peers=${cohortPeerIds.size})`);
     
-    // SAKURA: return both the map, root internal ID, and cohort peer IDs
+    // SAKURA: checks if the focus node is filtered out
+    let rootFilteredOut = false;
+
+    if (!passesFilters(rootId)) {
+        rootFilteredOut = true;
+    }
+
     return { 
         graphData: myMap, 
         rootInternalId: rootId,
-        cohortPeerIds: cohortPeerIds
+        cohortPeerIds: cohortPeerIds,
+        rootFilteredOut
     };
 }
