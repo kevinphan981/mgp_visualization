@@ -16,6 +16,12 @@ function Navigation({ currentPage, onPageChange }) {
             Home
           </button>
           <button
+          className={`nav-link ${currentPage === 'history' ? 'active' : ''}`}
+          onClick={() => onPageChange('history')}
+          >
+          History
+          </button>
+          <button
             className={`nav-link ${currentPage === 'about' ? 'active' : ''}`}
             onClick={() => onPageChange('about')}
           >

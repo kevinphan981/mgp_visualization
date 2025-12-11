@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import Navigation from './components/Navigation'
 import Homepage from './components/Homepage'
 import About from './components/About'
+import History from './components/History'   // ⬅ NEW LINE
 import './App.css'
 
 function App() {
@@ -9,9 +10,15 @@ function App() {
 
   return (
     <div className="App">
-      <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
+      <Navigation 
+        currentPage={currentPage} 
+        onPageChange={setCurrentPage} 
+      />
+
       <div className="page-content">
-        {currentPage === 'home' ? <Homepage /> : <About />}
+        {currentPage === 'home' && <Homepage />}
+        {currentPage === 'about' && <About />}
+        {currentPage === 'history' && <History />}   {/* ⬅ NEW PAGE */}
       </div>
     </div>
   )
