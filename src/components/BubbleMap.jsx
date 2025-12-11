@@ -79,12 +79,6 @@ const BubbleMap = () => {
 
   return (
     <div className="history-page-container">
-
-      <header className="homepage-header">
-        <h1 className="homepage-title">Mathematics PhD Output by University</h1>
-      </header>
-
-      {/* Slider */}
       <div className="slider-container">
         <div className="slider-year-label">{year}</div>
         <input

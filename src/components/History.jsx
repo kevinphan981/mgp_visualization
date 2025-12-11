@@ -8,21 +8,16 @@ function History() {
   return (
     <div className="homepage"> 
       <div className="homepage-container">
-
-        {/* Bubble Map Section */}
-        <div className="history-map-section">
-          <BubbleMapWithSlider />
-        </div>
-
-        {/* Unified Info Card */}
+        <header className="homepage-header">
+          <h1 className="homepage-title">Mathematics PhD Output by University</h1>
+        </header>
+        <BubbleMapWithSlider />
         <div className="info-section">
           <div className="info-card">
-
-            {/* NEW — Mathematics Genealogy History */}
             <h3>Mathematical Lineage & The Mathematics Genealogy Project</h3>
             <p>
               The Mathematics Genealogy Project documents the academic “family tree” 
-              of mathematicians, tracing advisor–student relationships across centuries. 
+              of mathematicians, tracing advisor to student relationships across centuries. 
               By mapping where and when doctorates were earned, we can visualize how 
               mathematical knowledge spreads through generations and across continents.
             </p>
