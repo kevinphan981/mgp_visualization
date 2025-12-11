@@ -1,11 +1,20 @@
-/* Make page match homepage spacing */
+
 .history-page-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
 }
 
-/* TEXT BOX ABOVE SLIDER */
+.history-page-container > .homepage-header + * {
+  margin-top: 2rem !important;
+  margin-bottom: 2rem;
+}
+
+.homepage-header {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
 .history-text-box {
   background: white;
   padding: 1.75rem 2rem;
